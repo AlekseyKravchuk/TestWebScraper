@@ -71,6 +71,7 @@ def main():
 
     # try to use regular expression directly to extract emails
     emails = re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}', html)
+    # emails = re.findall('\w+@\w+\.{1}\w+', html)
     print("EMAILS:")
     for mail in emails:
         print(f"\t{mail}")
