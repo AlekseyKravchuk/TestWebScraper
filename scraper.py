@@ -44,6 +44,7 @@ def main():
         data=None,
         headers={'User-Agent': ua.google}
         )
+    # print(f"type(request) = {type(request)}")
 
     try:
         # urllib.request.urlopen(...) returns object of type: http.client.HTTPResponse
@@ -53,6 +54,8 @@ def main():
         raise ValueError('Timeout ERROR')
     except (HTTPError, URLError):
         raise ValueError('Bad Url ERROR')
+
+    # print(f"type(response = {type(response)}")
 
     status = response.status
     contentType = response.info().get_content_type()
@@ -65,23 +68,32 @@ def main():
     if (charset != 'utf-8'):
         raise ValueError('charset is not utf-8, handler hasn\'t implemented yet')
 
-    # suppose it will work for other than utf-8 charsets
     # convert bytes to string using the proper charset
     html = raw_data.decode(charset)
+    # print(f"type(html) = {type(html)}")
+    # print(f"len(html) = {len(html)}")
 
-    # try to use regular expression directly to extract emails
+    # use regular expression to extract emails from main page
     emails = re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}', html)
+    unique_emails = set(emails)
     # emails = re.findall('\w+@\w+\.{1}\w+', html)
     print("EMAILS:")
-    for mail in emails:
+    for mail in unique_emails:
         print(f"\t{mail}")
 
-    # try to extract all the links in html page
+    # extract all the <a> tags from page(string) html
     soup = BeautifulSoup(html, "lxml")
+    links = []
+    tags = soup.find_all('a')
+    accepted_strings = {'Контакты', 'О компании'}
+    for tag in tags:
+        if (tag.text in accepted_strings):
+            links.append(tag.attrs['href'])
+    unique_links = set(links)
 
-    links = soup.find_all(re.compile('^a'))
+    #  links of interest to follow in next commit
     print("LINKS:")
-    for link in links:
+    for link in unique_links:
         print(f"\t{link}")
 
     # # ####################Step 3. Organizing extracted data ####################
