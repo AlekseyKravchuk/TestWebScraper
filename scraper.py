@@ -1,55 +1,63 @@
-import os
 from googlesearch import search
-import urllib
 from fake_useragent import UserAgent
-import re
 from bs4 import BeautifulSoup
+from importlib import import_module
+
+libNames = ['yaml', 'os', 'urllib', 're']
+
+for libname in libNames:
+    try:
+        lib = import_module(libname)
+    except ImportError as err:
+        print('Error:', err)
+    else:
+        globals()[libname] = lib
 
 
 def main():
     # #################### Step 1. Getting the URLs using Google search engine ####################
     # file name to extract search strings from
-    fileName = "search_phrases.txt"
+    with open(r'scraper-conf.yaml') as f:
+        env = yaml.load(f, Loader=yaml.FullLoader)
 
+    fileName = env['fileNameWithSearchStrings']
     search_strs = getSearchStrings(fileName)
 
     # extract base URLs and store only unique ones
-    urls = getBaseUrls( getURLs(search_strs) )
+    urls = getBaseUrls(getURLs(search_strs))
 
-    # for url in urls:
-    #     print(url)
-
-    url = urls[3]  # URL to test:
+    # url = urls[5]  # URL to test:
+    url = "https://sprint5.ru/"
     print(f"\ncurrent url to test: {url}")
     html = getHTMLPageAsString(url)
 
     # #################### Step 2. Parsing the URLs ####################
 
-    # use regular expression to extract emails from main page
-    emails = re.findall(r'[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}', html)
-    # emails = re.findall('\w+@\w+\.{1}\w+', html)
-    # phones = re.findall(r'(\d{3}[-\.\s]??\d{3}[-\.\s]??\d{4}|\(\d{3}\)\s*\d{3}[-\.\s]??\d{4}|\d{3}[-\.\s]??\d{4})', html)
-    phones = re.findall("[(][\d]{3}[)][ ]?[\d]{3}-[\d]{4}", html)
-    # phone_number_regex_pattern = r"\(?\d{3}\)?[-.\s]\d{3}[-.\s]\d{4}"
-    unique_phones = set(phones)
-    unique_emails = set(emails)
+    # use regular expression from scraper-conf.yaml configuration file
+    combined_mails_re = '|'.join(env['regexp_mails'])
+    emails_matches = re.findall(combined_mails_re, html)
+    emails = set(emails_matches)
+
+    combined_phones_re = '|'.join(env['regexp_phones'])
+    phone_matches = re.findall(combined_phones_re, html)
+    phones = set(phone_matches)
 
     print("EMAILS:")
-    for mail in unique_emails:
+    for mail in emails:
         print(f"\t{mail}")
 
     print("PHONES:")
-    for mail in unique_phones:
-        print(f"\t{phones}")
+    for phone in phones:
+        print(f"\t{phone}")
 
     # extract all the <a> tags from page(string) html
-    soup = BeautifulSoup(html, "lxml")
+    soup = BeautifulSoup(html, "html.parser")
     links = []
     tags = soup.find_all('a')
     accepted_strings = {'Контакты', 'О компании'}
 
     for tag in tags:
-        if (tag.text in accepted_strings):
+        if tag.text in env['contact_patterns']:
             links.append(tag.attrs['href'])
 
     unique_links = set(links)
@@ -61,8 +69,8 @@ def main():
 
     # # ####################Step 3. Organizing extracted data ####################
 
-
     # #################### FUNCTIONS ####################
+
 
 def getSearchStrings(fileName):
     requests = []
@@ -70,30 +78,33 @@ def getSearchStrings(fileName):
         print("File path {fileName} does not exist. Exiting...")
 
     with open(fileName, 'r') as f:
-        line = f.readline()
-        while line:
-            requests.append(line)
+        while True:
             line = f.readline()
+            if not line:
+                break
+            if line != '\n':
+                requests.append(line)
     return requests
 
 
 def getBaseUrls(urls):
     # Parse a URL into six components, returning a 6-item named tuple.
     parsed = [urllib.parse.urlparse(url) for url in urls]
-    urls = list(set([x.scheme + '://' + x.hostname + '/' for x in parsed ]))
+    urls = list(set([x.scheme + '://' + x.hostname + '/' for x in parsed]))
     return urls
+
 
 def getURLs(search_strs):
     urls = []
     for str in search_strs:
-        for url in search(str,             # The query you want to run
-                          tld='com',       # The top level domain
-                          lang='ru',       # The language
-                          num=10,          # Number of results per page
-                          start=0,         # First result to retrieve
-                          stop=10,         # Last result to retrieve
-                          pause=2.0,       # Lapse between HTTP requests
-        ):
+        for url in search(str,  # The query you want to run
+                          tld='com',  # The top level domain
+                          lang='ru',  # The language
+                          num=10,  # Number of results per page
+                          start=0,  # First result to retrieve
+                          stop=10,  # Last result to retrieve
+                          pause=2.0,  # Lapse between HTTP requests
+                          ):
             urls.append(url)
     return urls
 
@@ -106,7 +117,7 @@ def getHTMLPageAsString(url):
         url,
         data=None,
         headers={'User-Agent': ua.google}
-        )
+    )
     # print(f"type(request) = {type(request)}")
 
     # urllib.request.urlopen(...) returns object of type: http.client.HTTPResponse

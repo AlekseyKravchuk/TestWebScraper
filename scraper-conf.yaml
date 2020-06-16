@@ -1,0 +1,22 @@
+# file containing search phrases
+fileNameWithSearchStrings: "search_phrases.txt"
+
+# list of regular expressions to match the phones in given format
+regexp_phones:
+  # regexp for phones like 8 812 360-99-18
+  - '\d{1}\s{0,1}\d{3}\s\d{3}-\d{2}-\d{2}'
+
+  # regexp for phones like 8(812)360-99-18 or 8(812) 360-99-18
+  - '(?:\d\(){1}\d{3}\)\s?\d{3}-\d{2}-\d{2}'
+
+  # regexp for mobile phones like +7(921)360-99-18, +7-921-360-99-18, 8-921-360-99-18, 8(921) 360-99-18
+  - '(?:\+7|8){1}\s+[\s\-\(]?\d{3}[\s\-\)]?\s?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}'
+
+regexp_mails:
+  - '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,4}'
+  - '\w+@\w+\.{1}\w+'
+
+contact_patterns:
+  - 'Контакты'
+  - 'О компании'
+  - 'Contacts'
